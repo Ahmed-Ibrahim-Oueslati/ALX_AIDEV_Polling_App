@@ -1,11 +1,11 @@
 
-import { motion } from 'framer-motion';
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./contexts/AuthContext";
-import Header from "@/components/header";
-import Sidebar from "@/components/sidebar";
+import AnimatedLayout from "@/components/animated-layout";
+import NewHeader from "@/components/new-header";
+import NewSidebar from "@/components/new-sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,16 +33,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <div className="flex">
-            <Sidebar />
-            <motion.main
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex-grow container mx-auto px-4 py-8"
-            >
-              {children}
-            </motion.main>
+          <NewHeader />
+          <div className="dashboard">
+            <NewSidebar />
+            <AnimatedLayout>{children}</AnimatedLayout>
           </div>
         </AuthProvider>
       </body>

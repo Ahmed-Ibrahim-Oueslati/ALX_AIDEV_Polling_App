@@ -1,72 +1,149 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { motion } from 'framer-motion'
+import React, { useEffect, useState } from 'react'
+import './exemple.css'
 
-export default function Home() {
+type Poll = {
+  id: string
+  question: string
+  options: { label: string; pct: number; selected?: boolean }[]
+  status?: string
+  meta?: string
+}
+
+const samplePolls: Poll[] = [
+  {
+    id: '1',
+    question: 'Which programming language should we learn next?',
+    status: 'Active',
+    meta: 'Ahmed Ibrahim · 2 days ago · 127 votes',
+    options: [
+      { label: 'Rust', pct: 45, selected: true },
+      { label: 'Go', pct: 30 },
+      { label: 'TypeScript', pct: 25 }
+    ]
+  },
+  {
+    id: '2',
+    question: 'Best code editor for 2025?',
+    status: 'Draft',
+    meta: 'Developer Team · 1 hour ago · 89 votes',
+    options: [
+      { label: 'Neovim (LazyVim)', pct: 65 },
+      { label: 'VS Code', pct: 25 },
+      { label: 'JetBrains IDEs', pct: 10 }
+    ]
+  }
+]
+
+export default function HomePage() {
+  const [time, setTime] = useState('')
+  const [polls, setPolls] = useState<Poll[]>(samplePolls)
+  const [toast, setToast] = useState<string | null>(null)
+  const [activeNav, setActiveNav] = useState('Dashboard')
+  const [activeSidebar, setActiveSidebar] = useState('Dashboard')
+
+  useEffect(() => {
+    const up = () => {
+      const now = new Date()
+      setTime(now.toLocaleTimeString('en-US', { hour12: false }))
+    }
+    up()
+    const t = setInterval(up, 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  function handleOptionClick(pollId: string, optionIdx: number) {
+    setPolls(prev => prev.map(p => {
+      if (p.id !== pollId) return p
+      const options = p.options.map((o, i) => ({ ...o, selected: i === optionIdx }))
+      return { ...p, options }
+    }))
+    setToast('Vote registered (local only)')
+    setTimeout(() => setToast(null), 1800)
+  }
+
+  function handleButtonClick(label: string) {
+    setToast(`${label} clicked`)
+    setTimeout(() => setToast(null), 1500)
+  }
+
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center px-4 py-16">
-      <h1 className="text-5xl md:text-7xl font-extrabold text-foreground drop-shadow-lg leading-tight">
-        Welcome to <span className="gradient-text">PollWave</span>
-      </h1>
-      <p className="mt-6 max-w-xl text-lg md:text-2xl text-muted-foreground">
-        Create engaging polls, share them instantly with QR codes, and see live results in real&nbsp;time.
-      </p>
+    <div>
+      <header className="ex-header">
+        <div className="header-content">
+          <div className="logo"><span style={{fontSize:18}}>▣</span><span>PollWave</span></div>
+          <nav className="nav">
+            {['Dashboard','My Polls','Analytics','Settings'].map(n => (
+              <a key={n} href="#" className={`nav-link ${activeNav===n? 'active': ''}`} onClick={(e)=>{e.preventDefault(); setActiveNav(n)}}>{n}</a>
+            ))}
+          </nav>
+        </div>
+      </header>
 
-      <div className="mt-10 flex flex-col sm:flex-row gap-4">
-        <Link href="/polls/create">
-          <Button size="lg" className="shadow-md hover:shadow-xl bg-primary text-primary-foreground hover:bg-primary/90 border-2 border-primary rounded-full">
-            Create Your First Poll
-          </Button>
-        </Link>
-        <Link href="/polls">
-          <Button size="lg" variant="outline" className="text-foreground hover:bg-accent/10 hover:text-foreground border-2 border-border rounded-full">
-            Browse Polls
-          </Button>
-        </Link>
-      </div>
+      <main className="ex-container">
+        <div className="status-bar">
+          <div className="status-item"><div className="status-indicator"/>System Online</div>
+          <div className="status-item">👥 1,337 Active Users</div>
+          <div className="status-item">📊 42 Active Polls</div>
+          <div className="status-item">⏱️ <span id="current-time">{time}</span></div>
+        </div>
 
-      <div className="mt-20 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl w-full">
-        {[
-          {
-            title: 'Instant QR Sharing',
-            desc: 'Share a scan-ready QR code for every poll you create.'
-          },
-          {
-            title: 'Real-Time Results',
-            desc: 'Watch votes roll in live without refreshing the page.'
-          },
-          {
-            title: 'Secure & Private',
-            desc: 'Powered by Supabase with Row Level Security for peace of mind.'
-          },
-          {
-            title: 'Mobile Friendly',
-            desc: 'Optimised experience across phones, tablets and desktops.'
-          },
-          {
-            title: 'Multiple Choice',
-            desc: 'Allow respondents to pick one or many options with ease.'
-          },
-          {
-            title: 'Open Source',
-            desc: 'Built with Next.js 14, Tailwind CSS and shadcn/ui.'
-          }
-        ].map((feature, i) => (
-          <motion.div
-            key={feature.title}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1, duration: 0.5 }}
-            viewport={{ once: true }}
-            className="rounded-xl bg-card backdrop-blur-sm p-6 text-left text-card-foreground border border-border shadow-lg hover:shadow-2xl transition-shadow"
-          >
-            <h3 className="text-xl font-semibold mb-2 text-primary">{feature.title}</h3>
-            <p className="text-sm opacity-90">{feature.desc}</p>
-          </motion.div>
-        ))}
-      </div>
+        <div className="dashboard">
+          <aside className="sidebar">
+            <div className="sidebar-section">
+              <div className="sidebar-title">Navigation</div>
+              {['Dashboard','Create Poll','My Polls','Analytics'].map(s => (
+                <div key={s} className={`sidebar-item ${activeSidebar===s? 'active':''}`} onClick={()=>setActiveSidebar(s)}>{s}</div>
+              ))}
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-title">Quick Actions</div>
+              <button className="btn" style={{width:'100%', marginBottom:8}} onClick={()=>handleButtonClick('New Poll')}><span>＋</span> New Poll</button>
+              <button className="btn btn-secondary" style={{width:'100%'}} onClick={()=>handleButtonClick('Export Data')}>Export Data</button>
+            </div>
+          </aside>
+
+          <section className="main-content">
+            <div className="content-header">
+              <h2 className="content-title">Active Polls</h2>
+              <div>
+                <button className="btn" onClick={()=>handleButtonClick('Create Poll')}>＋ Create Poll</button>
+              </div>
+            </div>
+
+            <div className="polls-grid">
+              {polls.map(poll => (
+                <article key={poll.id} className="poll-card">
+                  <div className="poll-header">
+                    <div className="poll-title">{poll.question}</div>
+                    <div className="poll-status" style={{background: poll.status==='Draft' ? 'var(--accent-orange)': undefined}}>{poll.status}</div>
+                  </div>
+                  <div className="poll-meta">{poll.meta}</div>
+
+                  <div className="poll-options">
+                    {poll.options.map((opt, idx) => (
+                      <div key={opt.label} className="option" onClick={()=>handleOptionClick(poll.id, idx)}>
+                        <div className={`option-radio ${opt.selected? 'selected':''}`} />
+                        <span>{opt.label}</span>
+                        <div className="option-bar" style={{width: `${opt.pct}%`}} aria-hidden />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{display:'flex', gap:8, marginTop:12}}>
+                    <button className="btn btn-secondary" onClick={()=>handleButtonClick('View')}>View</button>
+                    <button className="btn btn-secondary" onClick={()=>handleButtonClick('Share')}>Share</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }
