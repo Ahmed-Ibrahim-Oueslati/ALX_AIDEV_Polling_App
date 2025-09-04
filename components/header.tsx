@@ -1,46 +1,54 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { useSession, signOut } from 'next-auth/react'
+import { useAuth } from '@/app/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function Header() {
-  const { data: session } = useSession()
+  const { user } = useAuth()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
 
   return (
-    <header className="border-b">
+    <header className="border-b bg-white">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-2xl font-bold">
+          <Link href="/" className="text-2xl font-bold text-gray-900">
             Polling App
           </Link>
           <nav className="hidden space-x-4 md:flex">
             <Link
               href="/polls"
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+              className="text-gray-600 hover:text-gray-900"
             >
               Polls
             </Link>
-            {session && (
+            {user && (
               <Link
-                href="/dashboard"
-                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                href="/polls/my-polls"
+                className="text-gray-600 hover:text-gray-900"
               >
-                Dashboard
+                My Polls
               </Link>
             )}
           </nav>
         </div>
 
         <div className="flex items-center gap-4">
-          {session ? (
+          {user ? (
             <>
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                {session.user?.email}
+              <span className="text-sm text-gray-600">
+                {user.email}
               </span>
               <Button
                 variant="outline"
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={handleSignOut}
               >
                 Sign Out
               </Button>

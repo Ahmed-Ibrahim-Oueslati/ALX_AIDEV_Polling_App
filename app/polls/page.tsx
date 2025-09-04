@@ -26,39 +26,44 @@ export default function PollsPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Polls</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-4xl font-bold">Active Polls</h1>
+          <p className="text-gray-500">Click on a poll to view details and cast your vote.</p>
+        </div>
         <Link href="/polls/create">
           <Button>Create New Poll</Button>
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {polls.map((poll) => (
           <div
             key={poll.id}
-            className="rounded-lg border p-4 shadow-sm transition-shadow hover:shadow-md"
+            className="bg-white rounded-lg border shadow-md transition-shadow hover:shadow-lg overflow-hidden"
           >
-            <h2 className="text-xl font-semibold">{poll.question}</h2>
-            <div className="mt-4 space-y-2">
-              {poll.options.map((option, index) => (
-                <div key={index} className="flex justify-between">
-                  <span>{option}</span>
-                  <span className="text-gray-500">
-                    {poll.votes[index]} votes
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-              <span>Created: {new Date(poll.createdAt).toLocaleDateString()}</span>
-              <Link
-                href={`/polls/${poll.id}`}
-                className="text-blue-500 hover:underline"
-              >
-                View Details
-              </Link>
+            <div className="p-6">
+              <h2 className="text-2xl font-semibold mb-4">{poll.question}</h2>
+              <div className="space-y-3">
+                {poll.options.map((option, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span>{option}</span>
+                    <span className="font-semibold text-gray-600">
+                      {poll.votes[index]} votes
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex items-center justify-between text-sm text-gray-500">
+                <span>Created: {new Date(poll.createdAt).toLocaleDateString()}</span>
+                <Link
+                  href={`/polls/${poll.id}`}
+                  className="text-blue-600 hover:underline font-semibold"
+                >
+                  View & Vote
+                </Link>
+              </div>
             </div>
           </div>
         ))}
