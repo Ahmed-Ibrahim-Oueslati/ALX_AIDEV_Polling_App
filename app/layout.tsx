@@ -1,8 +1,11 @@
+
+import { motion } from 'framer-motion';
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import Header from "@/components/header";
+import Sidebar from "@/components/sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,15 +28,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <Header />
-          <main className="container mx-auto px-4 py-8">{children}</main>
+          <div className="flex">
+            <Sidebar />
+            <motion.main
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex-grow container mx-auto px-4 py-8"
+            >
+              {children}
+            </motion.main>
+          </div>
         </AuthProvider>
       </body>
     </html>
   );
 }
+

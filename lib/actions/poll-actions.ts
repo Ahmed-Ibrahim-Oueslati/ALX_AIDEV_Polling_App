@@ -2,7 +2,8 @@
 
 import { createClient } from "@supabase/supabase-js"
 import { z } from "zod"
-import { revalidatePath, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
 import { Database } from "../types/supabase-types"
 
 const PollSchema = z.object({
@@ -50,7 +51,7 @@ export async function createPollAction(
     }
 
     // Insert options
-    const optionRows = options.map((text) => ({ poll_id: poll.id, text }))
+    const optionRows = options.map((text) => ({ poll_id: poll.id as number, text }))
     const { error: optionsError } = await supabase
       .from("options")
       .insert(optionRows)

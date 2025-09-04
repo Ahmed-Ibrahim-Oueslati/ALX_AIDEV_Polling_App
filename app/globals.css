@@ -1,26 +1,64 @@
-@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background: #1a1b26;
+  --foreground: #a9b1d6;
+  --card: #1f202e;
+  --card-foreground: #a9b1d6;
+  --popover: #1f202e;
+  --popover-foreground: #a9b1d6;
+  --primary: #7aa2f7;
+  --primary-foreground: #1a1b26;
+  --secondary: #bb9af7;
+  --secondary-foreground: #1a1b26;
+  --muted: #24283b;
+  --muted-foreground: #a9b1d6;
+  --accent: #9ece6a;
+  --accent-foreground: #1a1b26;
+  --destructive: #f7768e;
+  --destructive-foreground: #1a1b26;
+  --border: #24283b;
+  --input: #24283b;
+  --ring: #7aa2f7;
+  --radius: 0.5rem;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --primary-purple: #8A2BE2;
+  --primary-blue: #007BFF;
+  --accent-green: #39FF14;
+  --accent-pink: #FF1493;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+  background-size: 2rem 2rem;
+}
+
+.gradient-text {
+  background: linear-gradient(to right, var(--primary-purple), var(--accent-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-clip-padding-box_border-gradient {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.bg-clip-padding-box_border-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  margin: -1px; /* equal to border thickness */
+  border-radius: inherit; /* inherit container's border-radius */
+  background: linear-gradient(to right, var(--primary-purple), var(--accent-pink));
 }
