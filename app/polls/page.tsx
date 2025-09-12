@@ -2,15 +2,16 @@
 
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import PollCard from '@/components/polls/PollCard'
 
 interface Poll {
   id: string
   question: string
-  options: string[]
-  votes: number[]
+  options: { text: string; votes: number }[]
   createdAt: string
   createdBy: string
+  isMultipleChoice: boolean
+  expiresAt?: string
 }
 
 export default function PollsPage() {
@@ -19,12 +20,22 @@ export default function PollsPage() {
     {
       id: '1',
       question: 'What is your favorite programming language?',
-      options: ['JavaScript', 'Python', 'Java', 'C++'],
-      votes: [10, 15, 8, 5],
+      options: [
+        { text: 'JavaScript', votes: 10 },
+        { text: 'Python', votes: 15 },
+        { text: 'Java', votes: 8 },
+        { text: 'C++', votes: 5 },
+      ],
       createdAt: '2024-03-01',
-      createdBy: 'john@example.com'
-    }
+      createdBy: 'john@example.com',
+      isMultipleChoice: false,
+    },
   ]
+
+  const handleVote = (pollId: string, optionId: string) => {
+    console.log(`Voted on poll ${pollId} for option ${optionId}`)
+    // In a real app, you would send this to your backend
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -40,30 +51,7 @@ export default function PollsPage() {
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {polls.map((poll) => (
-          <Card key={poll.id}>
-            <CardHeader>
-              <CardTitle>{poll.question}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {poll.options.map((option, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span>{option}</span>
-                  <span className="font-semibold text-muted-foreground">
-                    {poll.votes[index]} votes
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-            <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Created: {new Date(poll.createdAt).toLocaleDateString()}</span>
-              <Link
-                href={`/polls/${poll.id}`}
-                className="text-primary hover:underline font-semibold"
-              >
-                View & Vote
-              </Link>
-            </CardFooter>
-          </Card>
+          <PollCard key={poll.id} poll={poll} onVote={handleVote} />
         ))}
       </div>
     </div>

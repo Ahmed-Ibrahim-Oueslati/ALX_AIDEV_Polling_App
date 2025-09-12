@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Trash2, Plus, X, Calendar, Users, Clock, Eye, EyeOff, Share2, Settings, ChevronDown, AlertCircle, CheckCircle, Image } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPollAction } from '@/lib/actions/poll-actions'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { debounce } from 'lodash';
 
 const categories = [
   'General', 'Entertainment', 'Sports', 'Technology', 'Politics', 
@@ -54,80 +55,113 @@ export default function CreatePollPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const addOption = () => {
+  // Debounced validation to improve performance
+  const debouncedValidation = useCallback(
+    debounce((data) => {
+      const newErrors: Record<string, string> = {};
+
+      if (!data.title.trim()) {
+        newErrors.title = 'Poll title is required';
+      } else if (data.title.length > 200) {
+        newErrors.title = 'Title must be less than 200 characters';
+      }
+
+      if (data.description.length > 1000) {
+        newErrors.description = 'Description must be less than 1000 characters';
+      }
+
+      const validOptions = data.options.filter(option => option.trim());
+      if (validOptions.length < 2) {
+        newErrors.options = 'At least 2 options are required';
+      }
+
+      if (data.endDate && new Date(data.endDate + ' ' + (data.endTime || '23:59')) <= new Date()) {
+        newErrors.endDate = 'End date must be in the future';
+      }
+
+      if (data.maxVotes && (isNaN(Number(data.maxVotes)) || parseInt(data.maxVotes) < 1)) {
+        newErrors.maxVotes = 'Max votes must be a positive number';
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    }, 300),
+    []
+  );
+
+  // Optimized option management functions with validation
+  const addOption = useCallback(() => {
     if (pollData.options.length < 10) {
-      setPollData(prev => ({
-        ...prev,
-        options: [...prev.options, '']
-      }));
+      setPollData(prev => {
+        const newData = {
+          ...prev,
+          options: [...prev.options, '']
+        };
+        debouncedValidation(newData);
+        return newData;
+      });
+    } else {
+      setToast('Maximum 10 options allowed');
+      setTimeout(() => setToast(null), 1800);
     }
-  };
+  }, [pollData.options.length, debouncedValidation]);
 
-  const removeOption = (index: number) => {
+  const removeOption = useCallback((index: number) => {
     if (pollData.options.length > 2) {
-      setPollData(prev => ({
-        ...prev,
-        options: prev.options.filter((_, i) => i !== index)
-      }));
+      setPollData(prev => {
+        const newData = {
+          ...prev,
+          options: prev.options.filter((_, i) => i !== index)
+        };
+        debouncedValidation(newData);
+        return newData;
+      });
     }
-  };
+  }, [pollData.options.length, debouncedValidation]);
 
-  const updateOption = (index: number, value: string) => {
-    setPollData(prev => ({
-      ...prev,
-      options: prev.options.map((option, i) => i === index ? value : option)
-    }));
-  };
+  const updateOption = useCallback((index: number, value: string) => {
+    setPollData(prev => {
+      const newData = {
+        ...prev,
+        options: prev.options.map((option, i) => i === index ? value : option)
+      };
+      debouncedValidation(newData);
+      return newData;
+    });
+  }, [debouncedValidation]);
 
-  const addTag = () => {
-    if (currentTag.trim() && !pollData.tags.includes(currentTag.trim()) && pollData.tags.length < 5) {
+  // Enhanced tag management with validation and feedback
+  const addTag = useCallback(() => {
+    const trimmedTag = currentTag.trim();
+    if (!trimmedTag) {
+      setToast('Tag cannot be empty');
+    } else if (pollData.tags.includes(trimmedTag)) {
+      setToast('Tag already exists');
+    } else if (pollData.tags.length >= 5) {
+      setToast('Maximum 5 tags allowed');
+    } else {
       setPollData(prev => ({
         ...prev,
-        tags: [...prev.tags, currentTag.trim()]
+        tags: [...prev.tags, trimmedTag]
       }));
       setCurrentTag('');
     }
-  };
+    setTimeout(() => setToast(null), 1800);
+  }, [currentTag, pollData.tags]);
 
-  const removeTag = (tagToRemove: string) => {
+  const removeTag = useCallback((tagToRemove: string) => {
     setPollData(prev => ({
       ...prev,
       tags: prev.tags.filter(tag => tag !== tagToRemove)
     }));
-  };
+  }, []);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!pollData.title.trim()) {
-      newErrors.title = 'Poll title is required';
-    } else if (pollData.title.length > 200) {
-      newErrors.title = 'Title must be less than 200 characters';
-    }
-
-    if (pollData.description.length > 1000) {
-      newErrors.description = 'Description must be less than 1000 characters';
-    }
-
-    const validOptions = pollData.options.filter(option => option.trim());
-    if (validOptions.length < 2) {
-      newErrors.options = 'At least 2 options are required';
-    }
-
-    if (pollData.endDate && new Date(pollData.endDate + ' ' + (pollData.endTime || '23:59')) <= new Date()) {
-      newErrors.endDate = 'End date must be in the future';
-    }
-
-    if (pollData.maxVotes && (isNaN(Number(pollData.maxVotes)) || parseInt(pollData.maxVotes) < 1)) {
-      newErrors.maxVotes = 'Max votes must be a positive number';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
+  // Optimized form submission with better error handling and feedback
   const handleSubmit = async () => {
-    if (!validateForm()) {
+    const isValid = await debouncedValidation(pollData);
+    if (!isValid) {
+      setToast('Please fix the errors before submitting');
+      setTimeout(() => setToast(null), 1800);
       return;
     }
 
@@ -135,38 +169,57 @@ export default function CreatePollPage() {
     setToast('Creating poll...');
     
     try {
+      // Optimistic UI update
+      const validOptions = pollData.options.filter(option => option.trim());
+      
+      // Simulate network delay for better UX
       await new Promise(resolve => setTimeout(resolve, 900));
       
-      const validOptions = pollData.options.filter(option => option.trim());
       const result = await createPollAction(pollData.title, validOptions);
       
       if (result?.error) {
         setErrors({ submit: result.error });
-        setToast('Failed to create poll');
+        setToast('Failed to create poll: ' + result.error);
       } else {
-        setToast('Poll created');
-        setTimeout(() => router.push('/polls'), 900);
+        setToast('Poll created successfully!');
+        // Delay redirect for toast visibility
+        setTimeout(() => router.push('/polls'), 1000);
       }
     } catch (error) {
+      console.error('Poll creation error:', error);
       setErrors({ submit: 'Failed to create poll. Please try again.' });
-      setToast('Failed to create poll');
+      setToast('Failed to create poll. Please try again.');
     } finally {
       setIsSubmitting(false);
-      setTimeout(() => setToast(null), 1800);
+      setTimeout(() => setToast(null), 2000);
     }
   };
 
+  // Enhanced animation effect with cleanup
   useEffect(() => {
-    // animate bars on mount
-    const el = barsRef.current
-    if (!el) return
-    const bars = Array.from(el.querySelectorAll<HTMLDivElement>('.option-bar'))
+    const el = barsRef.current;
+    if (!el) return;
+
+    const bars = Array.from(el.querySelectorAll<HTMLDivElement>('.option-bar'));
+    const animations: number[] = [];
+
     bars.forEach((bar, i) => {
-      const target = bar.getAttribute('data-target') || '0%'
-      bar.style.width = '0%'
-      setTimeout(() => { bar.style.transition = 'width 600ms ease'; bar.style.width = target }, 100 + i * 120)
-    })
-  }, [pollData.options])
+      const target = bar.getAttribute('data-target') || '0%';
+      bar.style.width = '0%';
+      
+      animations.push(
+        setTimeout(() => {
+          bar.style.transition = 'width 600ms ease';
+          bar.style.width = target;
+        }, 100 + i * 120)
+      );
+    });
+
+    // Cleanup function to clear timeouts
+    return () => {
+      animations.forEach(timeoutId => clearTimeout(timeoutId));
+    };
+  }, [pollData.options]);
 
   const PollPreview = () => (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
