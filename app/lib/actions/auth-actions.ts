@@ -3,6 +3,15 @@
 import { createClient } from '@/lib/supabase/server';
 import { LoginFormData, RegisterFormData } from '../types';
 
+import { z } from 'zod';
+import { logSecurityEvent, updateUserLoginMetadata } from './security-actions';
+
+// Zod schema for login credentials
+const LoginSchema = z.object({
+  email: z.string().email("Invalid email format."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+});
+
 /**
  * Handles user login by authenticating with Supabase.
  *
@@ -13,35 +22,55 @@ import { LoginFormData, RegisterFormData } from '../types';
  * @returns {Promise<{ error: string | null }>} A promise that resolves to an object
  * with an `error` property. If login is successful, `error` is `null`.
  * Otherwise, it contains an error message.
- *
- * @example
- * ```typescript
- * const result = await login({ email: 'user@example.com', password: 'password123' });
- * if (result.error) {
- *   console.error('Login failed:', result.error);
- * } else {
- *   console.log('Login successful!');
- * }
- * ```
- *
- * @see {@link https://supabase.com/docs/reference/javascript/auth-signinwithpassword}
  */
-export async function login(data: LoginFormData) {
+export async function login(data: LoginFormData, metadata: { userAgent: string, ipAddress: string }) {
   const supabase = await createClient();
 
-  // Attempt to sign in with email and password
-  const { error } = await supabase.auth.signInWithPassword({
-    email: data.email,
-    password: data.password,
-  });
-
-  if (error) {
-    // Return a structured error response
-    return { error: error.message };
+  const validation = LoginSchema.safeParse(data);
+  if (!validation.success) {
+    await logSecurityEvent('invalid_credentials_format', { email: data.email, ipAddress: metadata.ipAddress });
+    return { error: validation.error.flatten().fieldErrors };
   }
 
-  // On success, return with no error
-  return { error: null };
+  const { email, password } = validation.data;
+
+  // Rate limiting check would be implemented here in a real application
+
+  try {
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      await logSecurityEvent('invalid_login_attempt', { email, ipAddress: metadata.ipAddress, userAgent: metadata.userAgent });
+      return { error: 'Invalid email or password' };
+    }
+
+    if (!authData.user) {
+      return { error: 'Authentication failed' };
+    }
+
+    await logSecurityEvent('successful_login', {
+      userId: authData.user.id,
+      email: authData.user.email,
+      ipAddress: metadata.ipAddress,
+      userAgent: metadata.userAgent,
+    });
+
+    await updateUserLoginMetadata(authData.user.id, {
+      lastLoginAt: new Date(),
+      lastLoginIP: metadata.ipAddress,
+      lastUserAgent: metadata.userAgent,
+    });
+
+    return { error: null };
+
+  } catch (error) {
+    console.error('Unexpected error in login:', error);
+    await logSecurityEvent('authentication_system_error', { email, ipAddress: metadata.ipAddress, error: (error as Error).message });
+    return { error: 'An unexpected error occurred. Please try again.' };
+  }
 }
 
 /**

@@ -3,69 +3,76 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+import { z } from 'zod';
+
+// Zod schema for poll creation
+const CreatePollSchema = z.object({
+  title: z.string().min(2, "Title must be at least 2 characters.").max(200, "Title must be 200 characters or less."),
+  description: z.string().max(1000, "Description must be 1000 characters or less.").optional(),
+  options: z.array(z.string().min(1, "Option cannot be empty.")).min(2, "At least two options are required."),
+  endDate: z.date().optional(),
+  isPublic: z.boolean().default(true),
+});
+
 /**
  * @function createPoll
  * @description Server action to create a new poll. It validates the input, authenticates the user,
  * and inserts the new poll into the database.
  * @param {FormData} formData - The form data containing the poll question and options.
- * @returns {Promise<{ error: string | null }>} An object with an error message if something went wrong, or null on success.
+ * @returns {Promise<{ poll: any | null, error: string | null }>} An object with the created poll or an error message.
  */
 export async function createPoll(formData: FormData) {
   const supabase = await createClient();
 
-  const question = formData.get("question") as string;
-  const options = formData.getAll("options").filter(Boolean) as string[];
-
-  // Validate that a question and at least two options are provided.
-  if (!question || options.length < 2) {
-    return { error: "Please provide a question and at least two options." };
-  }
-
   // Get the current user from the session.
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) {
-    return { error: userError.message };
-  }
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "You must be logged in to create a poll." };
+    return { poll: null, error: "Authentication required" };
   }
 
-  // Insert the new poll into the 'polls' table and get the new poll's ID.
-  const { data: newPoll, error: pollError } = await supabase
-    .from("polls")
-    .insert({
-      created_by: user.id,
-      title: question, // Use 'title' column in the database
-    })
-    .select("id")
-    .single();
+  const rawData = {
+    title: formData.get('title'),
+    description: formData.get('description'),
+    options: formData.getAll('options').filter(Boolean),
+    endDate: formData.get('endDate') ? new Date(formData.get('endDate') as string) : undefined,
+    isPublic: formData.get('isPublic') === 'true',
+  };
 
-  if (pollError) {
-    return { error: pollError.message };
+  const validation = CreatePollSchema.safeParse(rawData);
+  if (!validation.success) {
+    return { poll: null, error: validation.error.flatten().fieldErrors };
   }
 
-  // Insert the options into the 'options' table.
-  const optionsToInsert = options.map((option) => ({
-    poll_id: newPoll.id,
-    text: option,
-  }));
+  const { title, description, options, endDate, isPublic } = validation.data;
 
-  const { error: optionsError } = await supabase
-    .from("options")
-    .insert(optionsToInsert);
+  try {
+    // Use a transaction to ensure data integrity
+    const { data: poll, error: dbError } = await supabase.rpc('create_full_poll', {
+      p_title: title,
+      p_description: description,
+      p_user_id: user.id,
+      p_end_date: endDate,
+      p_is_public: isPublic,
+      p_options: options
+    });
 
-  if (optionsError) {
-    // If options fail, consider deleting the poll to avoid orphaned polls.
-    await supabase.from("polls").delete().eq("id", newPoll.id);
-    return { error: optionsError.message };
+    if (dbError) {
+      console.error('Database error in createPoll:', dbError);
+      return { poll: null, error: 'Failed to create poll. Please try again.' };
+    }
+
+    // Trigger real-time notification for public polls
+    if (isPublic) {
+      // await notifyNewPoll(poll); // Assuming a notification function exists
+    }
+
+    revalidatePath("/polls");
+    return { poll, error: null };
+
+  } catch (error) {
+    console.error('Unexpected error in createPoll:', error);
+    return { poll: null, error: 'An unexpected error occurred. Please try again.' };
   }
-
-  // Revalidate the '/polls' path to show the new poll.
-  revalidatePath("/polls");
-  return { error: null };
 }
 
 /**
@@ -80,14 +87,18 @@ export async function getUserPolls() {
   } = await supabase.auth.getUser();
   if (!user) return { polls: [], error: "Not authenticated" };
 
-  // Fetch polls where the 'created_by' matches the current user's ID.
+  // Fetch polls and their related options
   const { data, error } = await supabase
     .from("polls")
-    .select("*")
+    .select(`
+      *,
+      options:options (*)
+    `)
     .eq("created_by", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return { polls: [], error: error.message };
+
   return { polls: data ?? [], error: null };
 }
 
@@ -116,7 +127,7 @@ export async function getPollById(id: string) {
  * @param {number} optionIndex - The index of the option being voted for.
  * @returns {Promise<{ error: string | null }>} An object with an error message if something went wrong, or null on success.
  */
-export async function submitVote(pollId: string, optionIndex: number) {
+export async function submitVote(pollId: string, optionId: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -125,34 +136,52 @@ export async function submitVote(pollId: string, optionIndex: number) {
   // Require user to be logged in to vote.
   if (!user) return { error: "You must be logged in to vote." };
 
-  // Check if the user has already voted on this poll.
-  const { data: existingVote, error: existingVoteError } = await supabase
-    .from("votes")
-    .select("id")
-    .eq("poll_id", pollId)
-    .eq("user_id", user.id)
-    .single();
+  try {
+    const { data, error } = await supabase.rpc('process_vote', {
+      p_poll_id: pollId,
+      p_option_id: optionId,
+      p_user_id: user.id,
+    });
 
-  // Ignore the error that occurs when no record is found.
-  if (existingVoteError && existingVoteError.code !== "PGRST116") {
-    return { error: existingVoteError.message };
+    if (error) {
+      // Handle specific database errors with user-friendly messages
+      switch (error.code) {
+        case 'P0001': // Custom error codes from the DB function
+          return { error: 'This poll has ended.' };
+        case 'P0002':
+          return { error: 'You have already voted on this poll.' };
+        case 'P0003':
+          return { error: 'Poll not found.' };
+        case 'P0004':
+          return { error: 'Selected option is not valid.' };
+        default:
+          console.error('Vote processing error:', error);
+          return { error: 'Failed to record vote. Please try again.' };
+      }
+    }
+
+    // Broadcast real-time update to all poll viewers
+    await supabase
+      .channel(`poll:${pollId}`)
+      .send({
+        type: 'broadcast',
+        event: 'vote_update',
+        payload: {
+          optionId,
+          newCount: data.new_vote_count,
+          totalVotes: data.total_votes
+        }
+      });
+
+    revalidatePath(`/polls/${pollId}`);
+    revalidatePath('/polls');
+    
+    return { error: null };
+
+  } catch (error) {
+    console.error('Unexpected error in submitVote:', error);
+    return { error: 'An unexpected error occurred. Please try again.' };
   }
-
-  if (existingVote) {
-    return { error: "You have already voted on this poll." };
-  }
-
-  // Insert the new vote into the 'votes' table.
-  const { error } = await supabase.from("votes").insert([
-    {
-      poll_id: pollId,
-      user_id: user.id,
-      option_index: optionIndex,
-    },
-  ]);
-
-  if (error) return { error: error.message };
-  return { error: null };
 }
 
 /**
