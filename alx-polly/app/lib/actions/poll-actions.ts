@@ -38,7 +38,7 @@ export async function createPoll(formData: FormData) {
     .from("polls")
     .insert({
       created_by: user.id,
-      question,
+      title: question, // Use 'title' column in the database
     })
     .select("id")
     .single();
@@ -221,7 +221,7 @@ export async function updatePoll(pollId: string, formData: FormData) {
   // Update the poll question
   const { error: pollError } = await supabase
     .from("polls")
-    .update({ question })
+    .update({ title: question }) // Use 'title' column in the database
     .eq("id", pollId)
     .eq("created_by", user.id);
 
