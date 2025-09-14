@@ -5,8 +5,9 @@ import { updatePoll } from '@/app/lib/actions/poll-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Poll } from '@/app/lib/types';
 
-export default function EditPollForm({ poll }: { poll: any }) {
+export default function EditPollForm({ poll }: { poll: Poll }) {
   const [question, setQuestion] = useState(poll.question);
   const [options, setOptions] = useState<string[]>(poll.options || []);
   const [error, setError] = useState<string | null>(null);

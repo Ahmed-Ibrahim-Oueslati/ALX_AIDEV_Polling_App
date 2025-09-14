@@ -10,7 +10,6 @@ interface SecurityEventPayload {
   userAgent?: string;
   userId?: string;
   error?: string;
-  [key: string]: any;
 }
 
 /**

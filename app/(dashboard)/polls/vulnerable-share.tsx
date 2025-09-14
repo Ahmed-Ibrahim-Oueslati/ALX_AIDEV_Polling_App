@@ -36,6 +36,7 @@ export default function VulnerableShare({
       await navigator.clipboard.writeText(shareUrl);
       toast.success("Link copied to clipboard!");
     } catch (err) {
+      console.error("Failed to copy link", err);
       toast.error("Failed to copy link");
     }
   };

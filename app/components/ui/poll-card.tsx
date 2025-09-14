@@ -3,21 +3,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Poll } from '@/app/lib/types';
 
 interface PollCardProps {
-  poll: {
-    id: string;
-    title: string;
-    description?: string;
-    options: any[];
-    votes?: number;
-    createdAt: string | Date;
-  };
+  poll: Poll;
 }
 
 export function PollCard({ poll }: PollCardProps) {
-  const totalVotes = poll.votes || poll.options.reduce((sum, option) => sum + (option.votes || 0), 0);
-  const formattedDate = typeof poll.createdAt === 'string' 
-    ? new Date(poll.createdAt).toLocaleDateString() 
-    : poll.createdAt.toLocaleDateString();
+  const totalVotes = (poll.options || []).reduce((sum, option) => sum + (option.votes || 0), 0);
+  const createdAtDate = poll.createdAt instanceof Date ? poll.createdAt : new Date(poll.createdAt);
+  const formattedDate = createdAtDate.toLocaleDateString();
 
   return (
     <Link href={`/polls/${poll.id}`} className="group block h-full">
