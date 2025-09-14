@@ -33,17 +33,34 @@ export async function createPoll(formData: FormData) {
     return { error: "You must be logged in to create a poll." };
   }
 
-  // Insert the new poll into the 'polls' table.
-  const { error } = await supabase.from("polls").insert([
-    {
-      user_id: user.id,
+  // Insert the new poll into the 'polls' table and get the new poll's ID.
+  const { data: newPoll, error: pollError } = await supabase
+    .from("polls")
+    .insert({
+      created_by: user.id,
       question,
-      options,
-    },
-  ]);
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    return { error: error.message };
+  if (pollError) {
+    return { error: pollError.message };
+  }
+
+  // Insert the options into the 'options' table.
+  const optionsToInsert = options.map((option) => ({
+    poll_id: newPoll.id,
+    text: option,
+  }));
+
+  const { error: optionsError } = await supabase
+    .from("options")
+    .insert(optionsToInsert);
+
+  if (optionsError) {
+    // If options fail, consider deleting the poll to avoid orphaned polls.
+    await supabase.from("polls").delete().eq("id", newPoll.id);
+    return { error: optionsError.message };
   }
 
   // Revalidate the '/polls' path to show the new poll.
@@ -63,11 +80,11 @@ export async function getUserPolls() {
   } = await supabase.auth.getUser();
   if (!user) return { polls: [], error: "Not authenticated" };
 
-  // Fetch polls where the 'user_id' matches the current user's ID.
+  // Fetch polls where the 'created_by' matches the current user's ID.
   const { data, error } = await supabase
     .from("polls")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("created_by", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return { polls: [], error: error.message };
@@ -158,12 +175,12 @@ export async function deletePoll(id: string) {
     return { error: "You must be logged in to delete a poll." };
   }
 
-  // Delete the poll only if the 'user_id' matches the current user's ID.
+  // Delete the poll only if the 'created_by' matches the current user's ID.
   const { error } = await supabase
     .from("polls")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("created_by", user.id);
     
   if (error) return { error: error.message };
   // Revalidate the '/polls' path to reflect the deletion.
@@ -201,16 +218,42 @@ export async function updatePoll(pollId: string, formData: FormData) {
     return { error: "You must be logged in to update a poll." };
   }
 
-  // Only allow updating polls owned by the user
-  const { error } = await supabase
+  // Update the poll question
+  const { error: pollError } = await supabase
     .from("polls")
-    .update({ question, options })
+    .update({ question })
     .eq("id", pollId)
-    .eq("user_id", user.id);
+    .eq("created_by", user.id);
 
-  if (error) {
-    return { error: error.message };
+  if (pollError) {
+    return { error: `Failed to update poll: ${pollError.message}` };
   }
 
+  // Delete old options
+  const { error: deleteError } = await supabase
+    .from("options")
+    .delete()
+    .eq("poll_id", pollId);
+
+  if (deleteError) {
+    return { error: `Failed to remove old options: ${deleteError.message}` };
+  }
+
+  // Insert new options
+  const newOptions = options.map((option) => ({
+    poll_id: pollId,
+    text: option,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("options")
+    .insert(newOptions);
+
+  if (insertError) {
+    return { error: `Failed to add new options: ${insertError.message}` };
+  }
+
+  revalidatePath(`/polls/${pollId}/edit`);
+  revalidatePath("/polls");
   return { error: null };
 }
