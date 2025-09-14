@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Calendar, Users, Clock, Eye, EyeOff, Share2, Settings, ChevronDown, AlertCircle, CheckCircle, Image, Trash2 } from 'lucide-react';
 
+interface PollData {
+  title: string;
+  description: string;
+  options: string[];
+  pollType: string;
+  isPrivate: boolean;
+  allowComments: boolean;
+  requireAuth: boolean;
+  endDate: string;
+  endTime: string;
+  maxVotes: string;
+  allowAddOptions: boolean;
+  showResults: string;
+  category: string;
+  tags: string[];
+}
+
 const CreatePollPage = () => {
-  const [pollData, setPollData] = useState({
+  const [pollData, setPollData] = useState<PollData>({
     title: '',
     description: '',
     options: ['', ''],
@@ -21,7 +38,7 @@ const CreatePollPage = () => {
 
   const [currentTag, setCurrentTag] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({} as any);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
 
@@ -52,7 +69,7 @@ const CreatePollPage = () => {
     }
   };
 
-  const removeOption = (index) => {
+  const removeOption = (index: number) => {
     if (pollData.options.length > 2) {
       setPollData(prev => ({
         ...prev,
@@ -61,7 +78,7 @@ const CreatePollPage = () => {
     }
   };
 
-  const updateOption = (index, value) => {
+  const updateOption = (index: number, value: string) => {
     setPollData(prev => ({
       ...prev,
       options: prev.options.map((option, i) => i === index ? value : option)
@@ -78,7 +95,7 @@ const CreatePollPage = () => {
     }
   };
 
-  const removeTag = (tagToRemove) => {
+  const removeTag = (tagToRemove: string) => {
     setPollData(prev => ({
       ...prev,
       tags: prev.tags.filter(tag => tag !== tagToRemove)
@@ -86,7 +103,7 @@ const CreatePollPage = () => {
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: Partial<PollData> = {};
 
     if (!pollData.title.trim()) {
       newErrors.title = 'Poll title is required';
@@ -100,14 +117,14 @@ const CreatePollPage = () => {
 
     const validOptions = pollData.options.filter(option => option.trim());
     if (validOptions.length < 2) {
-      newErrors.options = 'At least 2 options are required';
+      (newErrors as any).options = 'At least 2 options are required';
     }
 
     if (pollData.endDate && new Date(pollData.endDate + ' ' + (pollData.endTime || '23:59')) <= new Date()) {
       newErrors.endDate = 'End date must be in the future';
     }
 
-    if (pollData.maxVotes && (isNaN(pollData.maxVotes) || parseInt(pollData.maxVotes) < 1)) {
+    if (pollData.maxVotes && (isNaN(Number(pollData.maxVotes)) || parseInt(pollData.maxVotes) < 1)) {
       newErrors.maxVotes = 'Max votes must be a positive number';
     }
 
@@ -239,15 +256,15 @@ const CreatePollPage = () => {
                 onChange={(e) => setPollData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="What's your favorite programming language?"
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                  errors.title ? 'border-red-500' : 'border-gray-300'
+                  (errors as any).title ? 'border-red-500' : 'border-gray-300'
                 }`}
                 maxLength={200}
               />
               <div className="flex justify-between items-center mt-1">
-                {errors.title && (
+                {(errors as any).title && (
                   <span className="text-red-500 text-sm flex items-center">
                     <AlertCircle className="w-4 h-4 mr-1" />
-                    {errors.title}
+                    {(errors as any).title}
                   </span>
                 )}
                 <span className="text-gray-400 text-sm ml-auto">
@@ -267,15 +284,15 @@ const CreatePollPage = () => {
                 placeholder="Add more context to help people understand your poll..."
                 rows={3}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all ${
-                  errors.description ? 'border-red-500' : 'border-gray-300'
+                  (errors as any).description ? 'border-red-500' : 'border-gray-300'
                 }`}
                 maxLength={1000}
               />
               <div className="flex justify-between items-center mt-1">
-                {errors.description && (
+                {(errors as any).description && (
                   <span className="text-red-500 text-sm flex items-center">
                     <AlertCircle className="w-4 h-4 mr-1" />
-                    {errors.description}
+                    {(errors as any).description}
                   </span>
                 )}
                 <span className="text-gray-400 text-sm ml-auto">
@@ -406,10 +423,10 @@ const CreatePollPage = () => {
               ))}
             </div>
 
-            {errors.options && (
+            {(errors as any).options && (
               <div className="mt-2 text-red-500 text-sm flex items-center">
                 <AlertCircle className="w-4 h-4 mr-1" />
-                {errors.options}
+                {(errors as any).options}
               </div>
             )}
 
@@ -490,14 +507,14 @@ const CreatePollPage = () => {
                         onChange={(e) => setPollData(prev => ({ ...prev, maxVotes: e.target.value }))}
                         placeholder="Unlimited"
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          errors.maxVotes ? 'border-red-500' : 'border-gray-300'
+                          (errors as any).maxVotes ? 'border-red-500' : 'border-gray-300'
                         }`}
                         min="1"
                       />
-                      {errors.maxVotes && (
+                      {(errors as any).maxVotes && (
                         <span className="text-red-500 text-sm mt-1 flex items-center">
                           <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.maxVotes}
+                          {(errors as any).maxVotes}
                         </span>
                       )}
                     </div>
@@ -563,13 +580,13 @@ const CreatePollPage = () => {
                         onChange={(e) => setPollData(prev => ({ ...prev, endDate: e.target.value }))}
                         min={new Date().toISOString().split('T')[0]}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          errors.endDate ? 'border-red-500' : 'border-gray-300'
+                          (errors as any).endDate ? 'border-red-500' : 'border-gray-300'
                         }`}
                       />
-                      {errors.endDate && (
+                      {(errors as any).endDate && (
                         <span className="text-red-500 text-sm mt-1 flex items-center">
                           <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.endDate}
+                          {(errors as any).endDate}
                         </span>
                       )}
                     </div>

@@ -1,30 +1,168 @@
-# AI Agent Instructions: Fix ALX_AIDEV_Polling_App Repository
+# Complete Repository Error Analysis & Fixes
+## ALX_AIDEV_Polling_App - Potential Issues & Solutions
 
-## Overview
-This repository has Git merge conflicts and dependency issues that need to be resolved. Follow these instructions in order to fix all issues.
-
----
-
-## **PRIORITY 1: Fix Git Merge Conflicts**
-
-### 1. Examine package.json file
-- Look for Git merge conflict markers: `<<<<<<<`, `=======`, `>>>>>>>`
-- Remove all conflict markers
-- Choose the appropriate content (usually the HEAD version unless specified otherwise)
-- Ensure valid JSON syntax
-
-### 2. Check other files for merge conflicts
-- Search all files for conflict markers using: `grep -r "<<<<<<< HEAD" .`
-- Resolve any conflicts in component files, config files, etc.
-- Remove all instances of `<<<<<<<`, `=======`, `>>>>>>>` markers
+Based on your error output and typical Next.js app issues, here's a comprehensive analysis:
 
 ---
 
-## **PRIORITY 2: Fix Package Dependencies**
+## **CRITICAL ISSUES IDENTIFIED**
 
-### 3. Clean package.json
-Replace the entire package.json content with:
+### 1. **Font Import Error (CONFIRMED)**
+**Error:** `Unknown font 'Geist'`
+**Location:** `app/layout.tsx`
+**Fix:** Replace with standard Google Font
 
+```tsx
+// ❌ WRONG - Geist font doesn't exist
+import { Geist } from 'next/font/google'
+
+// ✅ CORRECT - Use Inter or other available fonts
+import { Inter } from 'next/font/google'
+const inter = Inter({ subsets: ['latin'] })
+```
+
+### 2. **Next.js Config Deprecation (CONFIRMED)**
+**Error:** `Invalid next.config.js options detected: Unrecognized key(s) in object: 'appDir'`
+**Location:** `next.config.js`
+**Fix:** Remove deprecated experimental option
+
+```javascript
+// ❌ WRONG - appDir is deprecated in Next.js 14+
+const nextConfig = {
+  experimental: {
+    appDir: true,
+  },
+}
+
+// ✅ CORRECT - Clean config for Next.js 14+
+const nextConfig = {
+  // App Router is now stable, no experimental flag needed
+}
+```
+
+---
+
+## **POTENTIAL ISSUES TO CHECK**
+
+### 3. **Package.json Dependencies**
+Check if you have version conflicts:
+
+```json
+{
+  "dependencies": {
+    "next": "14.2.32",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}
+```
+
+**Potential Issues:**
+- Mismatched React versions
+- Missing TypeScript types
+- Conflicting Tailwind CSS versions
+
+### 4. **File Structure Issues**
+Ensure you have the correct App Router structure:
+
+```
+src/
+├── app/
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── favicon.ico (optional)
+└── components/ (if any)
+```
+
+### 5. **TypeScript Configuration**
+Check `tsconfig.json` for proper paths:
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ]
+}
+```
+
+### 6. **CSS Import Issues**
+Check if `globals.css` imports are correct:
+
+```css
+/* Check if you have proper Tailwind imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* OR for Tailwind v4 */
+@import "tailwindcss";
+```
+
+### 7. **Environment Variables**
+The warning shows: `- Environments: .env.local`
+Check if `.env.local` has any malformed variables:
+
+```env
+# Ensure no spaces around = sign
+NEXT_PUBLIC_API_URL=http://localhost:3000
+DATABASE_URL=your_database_url
+```
+
+---
+
+## **FILES TO CHECK & FIX**
+
+### **File 1: src/app/layout.tsx**
+```tsx
+import './globals.css'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata = {
+  title: 'Polling App',
+  description: 'ALX AI Dev Polling Application',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        {children}
+      </body>
+    </html>
+  )
+}
+```
+
+### **File 2: next.config.js**
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Clean configuration for Next.js 14+
+  eslint: {
+    // Only run ESLint on these directories during production builds
+    dirs: ['src'],
+  },
+}
+
+module.exports = nextConfig
+```
+
+### **File 3: package.json** (Verify dependencies)
 ```json
 {
   "name": "poll-app",
@@ -37,211 +175,48 @@ Replace the entire package.json content with:
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "@tailwindcss/postcss": "^4.0.0-alpha.0",
-    "autoprefixer": "^10.4.0"
+    "next": "14.2.32",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "eslint": "^8.0.0",
-    "eslint-config-next": "^14.0.0",
-    "postcss": "^8.4.0",
-    "tailwindcss": "^4.0.0-alpha.0",
     "@types/node": "^20.0.0",
-    "@types/react": "^18.0.0",
-    "@types/react-dom": "^18.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "14.2.32",
     "typescript": "^5.0.0"
   }
 }
 ```
 
----
-
-## **PRIORITY 3: Fix PostCSS Configuration**
-
-### 4. Update postcss.config.js
-Create or replace postcss.config.js with:
-
-```javascript
-module.exports = {
-  plugins: {
-    '@tailwindcss/postcss': {},
-    autoprefixer: {},
-  },
-}
-```
-
-### 5. Update globals.css (for Tailwind v4)
-Replace the Tailwind imports in src/app/globals.css with:
-
-```css
-@import "tailwindcss";
-
-/* Custom styles below */
-html,
-body {
-  padding: 0;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-```
-
----
-
-## **PRIORITY 4: Fix Build Configuration**
-
-### 6. Check/Create next.config.js
-Create or update next.config.js:
-
-```javascript
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-}
-
-module.exports = nextConfig
-```
-
-### 7. Update tailwind.config.js for v4
-Create or replace tailwind.config.js:
-
-```javascript
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-```
-
----
-
-## **PRIORITY 5: Clean Installation**
-
-### 8. Perform clean install
-Execute these commands in order:
-
-```bash
-# Remove existing installations
-rm -rf node_modules
-rm -f package-lock.json
-
-# Fresh install
-npm install
-```
-
----
-
-## **PRIORITY 6: Fix TypeScript Issues**
-
-### 9. Check/Create tsconfig.json
-Create or replace tsconfig.json:
-
-```json
-{
-  "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "es6"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
-}
-```
-
----
-
-## **PRIORITY 7: Verify File Structure**
-
-### 10. Ensure proper Next.js 13+ app structure
-The project should have this structure:
-
-```
-project-root/
-├── src/
-│   ├── app/
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   └── components/ (optional)
-│   ├── components/ (optional)
-│   └── lib/ (optional)
-├── public/
-├── package.json
-├── next.config.js
-├── tailwind.config.js
-├── postcss.config.js
-├── tsconfig.json
-└── README.md
-```
-
-### 11. Create missing essential files if needed
-
-**src/app/layout.tsx:**
-```tsx
-import './globals.css'
-import { Inter } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata = {
-  title: 'Polling App',
-  description: 'A Next.js polling application',
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
-    </html>
-  )
-}
-```
-
-**src/app/page.tsx:**
+### **File 4: src/app/page.tsx** (Basic working version)
 ```tsx
 export default function Home() {
   return (
-    <main className="min-h-screen p-8">
-      <h1 className="text-4xl font-bold text-center">Polling App</h1>
-      <p className="text-center mt-4">Welcome to your polling application!</p>
+    <main className="container mx-auto px-4 py-8">
+      <h1 className="text-4xl font-bold text-center mb-8">
+        ALX AI Dev Polling App
+      </h1>
+      
+      <div className="max-w-md mx-auto bg-white shadow-lg rounded-lg p-6">
+        <h2 className="text-2xl font-semibold mb-4">Sample Poll</h2>
+        <p className="text-gray-600 mb-4">
+          What's your favorite programming language?
+        </p>
+        
+        <div className="space-y-2">
+          <button className="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded border">
+            JavaScript
+          </button>
+          <button className="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded border">
+            Python
+          </button>
+          <button className="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded border">
+            TypeScript
+          </button>
+        </div>
+      </div>
     </main>
   )
 }
@@ -249,79 +224,93 @@ export default function Home() {
 
 ---
 
-## **PRIORITY 8: Test and Validate**
+## **DEBUGGING STEPS**
 
-### 12. Run validation commands
-Execute these commands to ensure everything works:
+### **Step 1: Check Current File Contents**
+Run these commands to inspect your files:
 
 ```bash
-# Check for syntax errors
-npm run lint
+# Check layout.tsx content
+cat src/app/layout.tsx
 
-# Test build process
+# Check next.config.js content  
+cat next.config.js
+
+# Check package.json
+cat package.json
+```
+
+### **Step 2: Clean Installation**
+```bash
+# Stop dev server
+# Ctrl+C
+
+# Clean install
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### **Step 3: Build Test**
+```bash
+# Test build
 npm run build
 
-# Start development server
+# If build succeeds, start dev
 npm run dev
 ```
 
-### 13. Fix any remaining errors
-- If lint errors occur, fix them according to the error messages
-- If build errors occur, check for missing dependencies or syntax issues
-- If dev server fails, check for port conflicts or configuration issues
+### **Step 4: Check Browser Console**
+When you run `npm run dev`, check:
+1. Terminal output for errors
+2. Browser console (F12) for client-side errors
+3. Network tab for failed requests
 
 ---
 
-## **PRIORITY 9: Final Git Operations**
+## **COMMON POLLING APP ISSUES**
 
-### 14. Commit resolved changes
-```bash
-# Stage all changes
-git add .
+### **Issue A: State Management**
+If you're using React state for polls, ensure proper state initialization:
 
-# Commit with descriptive message
-git commit -m "Fix merge conflicts, update dependencies, and resolve build issues"
-
-# Push to main branch
-git push origin main
+```tsx
+const [votes, setVotes] = useState<Record<string, number>>({});
+const [hasVoted, setHasVoted] = useState(false);
 ```
 
+### **Issue B: API Routes** (if you have them)
+Check `src/app/api/` folder for:
+- Proper route handlers
+- Correct HTTP methods
+- Database connections
+
+### **Issue C: Database Connection** (if applicable)
+Check for:
+- Environment variables
+- Database connection strings
+- Migration files
+
 ---
 
-## **Expected Results**
+## **IMMEDIATE ACTION PLAN**
 
-After completing all steps, the repository should:
-- ✅ Have no merge conflicts
-- ✅ Build successfully with Next.js 15.5.3
-- ✅ Have proper Tailwind CSS v4 integration
-- ✅ Run without npm errors
-- ✅ Start development server on `npm run dev`
-- ✅ Pass linting checks
-- ✅ Have clean, committed code
+1. **Fix layout.tsx** - Replace Geist font with Inter
+2. **Fix next.config.js** - Remove appDir experimental option
+3. **Clean install** - Delete node_modules and reinstall
+4. **Test build** - Run `npm run build`
+5. **Check for additional errors** - Look for any other console errors
+6. **Verify file structure** - Ensure all required files exist
+7. **Check imports** - Verify all import statements are correct
 
 ---
 
-## **Troubleshooting**
+## **SUCCESS INDICATORS**
 
-If issues persist:
+After fixes, you should see:
+- ✅ No font errors
+- ✅ No next.config.js warnings
+- ✅ Clean build output
+- ✅ Dev server starts without errors
+- ✅ App loads at http://localhost:3000
+- ✅ No console errors in browser
 
-1. **Still getting merge conflict errors?**
-   - Manually search for `<<<<<<<` in all files
-   - Use VS Code's merge conflict resolution tools
-
-2. **Dependency issues?**
-   - Try `npm cache clean --force`
-   - Delete `node_modules` and `package-lock.json` again
-   - Run `npm install` again
-
-3. **Build errors?**
-   - Check that all import statements are correct
-   - Ensure file extensions match (.tsx for React components)
-   - Verify all dependencies are installed
-
-4. **Tailwind not working?**
-   - Ensure `@import "tailwindcss";` is in globals.css
-   - Check that content paths in tailwind.config.js match your file structure
-   - Restart the development server after config changes
-
-Execute these instructions step by step, and the polling app will be fully functional and ready for development.
+Run the fixes in order and test after each step to identify exactly which issue was causing problems.
