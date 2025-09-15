@@ -23,8 +23,23 @@ const LoginSchema = z.object({
  * with an `error` property. If login is successful, `error` is `null`.
  * Otherwise, it contains an error message.
  */
+
+// Zod schema for login metadata
+const LoginMetadataSchema = z.object({
+  userAgent: z.string().optional(),
+  ipAddress: z.string().ip().optional(),
+});
+
 export async function login(data: LoginFormData, metadata: { userAgent: string, ipAddress: string }) {
   const supabase = await createClient();
+
+  const metadataValidation = LoginMetadataSchema.safeParse(metadata);
+  if (!metadataValidation.success) {
+    // Log the validation error and decide whether to proceed or not
+    console.error('Invalid metadata format:', metadataValidation.error.flatten().fieldErrors);
+    // Depending on the severity, you might want to return an error
+    // return { error: 'Invalid request metadata.' };
+  }
 
   const validation = LoginSchema.safeParse(data);
   if (!validation.success) {
@@ -96,27 +111,39 @@ export async function login(data: LoginFormData, metadata: { userAgent: string, 
  *
  * @see {@link https://supabase.com/docs/reference/javascript/auth-signup}
  */
+
+// Zod schema for registration data
+const RegisterSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  email: z.string().email("Invalid email format."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
 export async function register(data: RegisterFormData) {
   const supabase = await createClient();
 
+  const validation = RegisterSchema.safeParse(data);
+  if (!validation.success) {
+    return { error: validation.error.flatten().fieldErrors };
+  }
+
+  const { name, email, password } = validation.data;
+
   // Attempt to sign up a new user
   const { error } = await supabase.auth.signUp({
-    email: data.email,
-    password: data.password,
+    email,
+    password,
     options: {
-      // Store additional user data
       data: {
-        name: data.name,
+        name,
       },
     },
   });
 
   if (error) {
-    // Return a structured error response
     return { error: error.message };
   }
 
-  // On success, return with no error
   return { error: null };
 }
 

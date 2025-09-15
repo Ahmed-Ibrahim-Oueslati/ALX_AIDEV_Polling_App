@@ -197,10 +197,7 @@ export async function deletePoll(id: string) {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
-  if (userError) {
-    return { error: userError.message };
-  }
-  if (!user) {
+  if (userError || !user) {
     return { error: "You must be logged in to delete a poll." };
   }
 
@@ -225,15 +222,27 @@ export async function deletePoll(id: string) {
  * @param {FormData} formData - The form data containing the updated question and options.
  * @returns {Promise<{ error: string | null }>} An object with an error message if something went wrong, or null on success.
  */
+
+// Zod schema for poll updates
+const UpdatePollSchema = z.object({
+  question: z.string().min(2, "Question must be at least 2 characters.").max(200, "Question must be 200 characters or less."),
+  options: z.array(z.string().min(1, "Option cannot be empty.")).min(2, "At least two options are required."),
+});
+
 export async function updatePoll(pollId: string, formData: FormData) {
   const supabase = await createClient();
 
-  const question = formData.get("question") as string;
-  const options = formData.getAll("options").filter(Boolean) as string[];
+  const rawData = {
+    question: formData.get('question'),
+    options: formData.getAll('options').filter(Boolean),
+  };
 
-  if (!question || options.length < 2) {
-    return { error: "Please provide a question and at least two options." };
+  const validation = UpdatePollSchema.safeParse(rawData);
+  if (!validation.success) {
+    return { error: validation.error.flatten().fieldErrors };
   }
+
+  const { question, options } = validation.data;
 
   // Get user from session
   const {
