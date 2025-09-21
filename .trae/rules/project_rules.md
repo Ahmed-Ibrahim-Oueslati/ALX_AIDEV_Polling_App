@@ -41,3 +41,36 @@ Before finalizing your response, you MUST verify the following:
 - Is the Supabase client used for all database interactions?
 - Are shadcn/ui components used for the UI where appropriate?
 - Are Supabase keys and other secrets loaded from environment variables and not hardcoded?
+
+// alternative
+# AI Development Rules for ALX Polly Analytics Feature
+
+## 1. **Security First**
+- Always implement proper authentication checks
+- Use Supabase RLS policies for data access control
+- Validate user permissions before displaying analytics data
+- Never expose other users' poll data
+
+## 2. **Type Safety**
+- Define strict TypeScript interfaces for all analytics data
+- Use Zod schemas for API response validation
+- Implement proper error handling with typed responses
+- No 'any' types allowed in production code
+
+## 3. **Performance Optimization**
+- Use React Server Components where possible
+- Implement proper data fetching patterns (avoid waterfall requests)
+- Cache analytics calculations using React.cache or SWR
+- Use database indexes for analytics queries
+
+## 4. **User Experience**
+- Follow existing design patterns from shadcn/ui components
+- Ensure responsive design for all screen sizes
+- Implement loading states for all async operations
+- Provide meaningful error messages and empty states
+
+## 5. **Code Organization**
+- Separate concerns: queries, calculations, and UI components
+- Use consistent naming conventions matching existing codebase
+- Keep components small and focused on single responsibilities
+- Write comprehensive JSDoc comments for complex functions

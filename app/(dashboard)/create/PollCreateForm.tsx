@@ -12,11 +12,15 @@ import { Label } from "@/components/ui/label";
  * The form handles state for options, errors, and success messages, and calls a server action to create the poll.
  * @returns {JSX.Element} The poll creation form component.
  */
+interface FieldErrors {
+  [key: string]: string[];
+}
+
 export default function PollCreateForm() {
   // State for poll options, initialized with two empty strings.
   const [options, setOptions] = useState(["", ""]);
   // State for storing error messages from the server action.
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | FieldErrors | null>(null);
   // State to indicate successful poll creation.
   const [success, setSuccess] = useState(false);
 
@@ -95,10 +99,22 @@ export default function PollCreateForm() {
         </Button>
       </div>
       {/* Display error message if there is one. */}
-      {error && <div className="text-red-500">{error}</div>}
+      {error && (
+        <div className="text-red-500">
+          {typeof error === 'string' ? (
+            error
+          ) : (
+            Object.entries(error).map(([field, messages]) => (
+              <p key={field}>
+                {field}: {(messages as string[]).join(', ')}
+              </p>
+            ))
+          )}
+        </div>
+      )}
       {/* Display success message upon successful creation. */}
       {success && <div className="text-green-600">Poll created! Redirecting...</div>}
       <Button type="submit">Create Poll</Button>
     </form>
   );
-} 
+}
